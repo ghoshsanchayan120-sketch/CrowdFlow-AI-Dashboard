@@ -1,12 +1,8 @@
-"use client"
-
 import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
     <fieldset
@@ -20,7 +16,6 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
     />
   )
 }
-
 function FieldLegend({
   className,
   variant = "legend",
@@ -40,7 +35,6 @@ function FieldLegend({
     />
   )
 }
-
 function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -53,7 +47,6 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
     />
   )
 }
-
 const fieldVariants = cva(
   "group/field data-[invalid=true]:text-destructive flex w-full gap-3",
   {
@@ -77,7 +70,6 @@ const fieldVariants = cva(
     },
   }
 )
-
 function Field({
   className,
   orientation = "vertical",
@@ -93,7 +85,6 @@ function Field({
     />
   )
 }
-
 function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -106,7 +97,6 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
     />
   )
 }
-
 function FieldLabel({
   className,
   ...props
@@ -124,7 +114,6 @@ function FieldLabel({
     />
   )
 }
-
 function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -137,7 +126,6 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
     />
   )
 }
-
 function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
@@ -152,7 +140,6 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
     />
   )
 }
-
 function FieldSeparator({
   children,
   className,
@@ -182,7 +169,6 @@ function FieldSeparator({
     </div>
   )
 }
-
 function FieldError({
   className,
   children,
@@ -195,15 +181,12 @@ function FieldError({
     if (children) {
       return children
     }
-
     if (!errors) {
       return null
     }
-
     if (errors?.length === 1 && errors[0]?.message) {
       return errors[0].message
     }
-
     return (
       <ul className="ml-4 flex list-disc flex-col gap-1">
         {errors.map(
@@ -213,11 +196,9 @@ function FieldError({
       </ul>
     )
   }, [children, errors])
-
   if (!content) {
     return null
   }
-
   return (
     <div
       role="alert"
@@ -229,7 +210,6 @@ function FieldError({
     </div>
   )
 }
-
 export {
   Field,
   FieldLabel,

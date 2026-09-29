@@ -1,0 +1,9 @@
+{
+  "outputDirectory": "artifacts/crowdflow-ai/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
