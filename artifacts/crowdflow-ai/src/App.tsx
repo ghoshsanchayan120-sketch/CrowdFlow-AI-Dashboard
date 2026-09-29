@@ -53,7 +53,7 @@ import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter
 import NotFound from '@/pages/not-found';
 
 type Risk = 'NORMAL' | 'WATCH' | 'WARNING' | 'HIGH' | 'CRITICAL';
-type Page = 'overview' | 'live' | 'forecast' | 'settings';
+type Page = 'overview' | 'live' | 'forecast' | 'actions' | 'announcements' | 'settings';
 type AnnouncementSource = 'Gemini' | 'Deterministic fallback';
 type GeminiStatus = 'idle' | 'testing' | 'connected' | 'error';
 
@@ -343,6 +343,8 @@ function Topbar({ page }: { page: Page }) {
     overview: ['Overview', 'Current operating picture'],
     live: ['Live Crowd', 'Observe station movement'],
     forecast: ['Forecast', 'Run a transparent what-if'],
+    actions: ['Actions', 'Review the next best move'],
+    announcements: ['Announcements', 'Prepare clear public language'],
     settings: ['Settings', 'Tune this control room'],
   };
   return (
@@ -438,7 +440,7 @@ function RecommendationCard({ compact = false }: { compact?: boolean }) {
 }
 
 function Overview() {
-  const { result, scenario } = useCrowdFlow();
+  const { result, scenario, announcements } = useCrowdFlow();
   const currentOccupancy = (scenario.currentCrowd / scenario.platformCapacity) * 100;
   return <PageFrame page="overview">
     <div className="cf-reveal mb-7 flex flex-wrap items-end justify-between gap-4"><div><div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#8f88b5]"><span className="h-1.5 w-1.5 rounded-full bg-[#67e8a5]" /> Central Terminal · CEN-01</div><h1 className="m-0 text-2xl font-extrabold tracking-[-.05em] text-[#f8f7ff] sm:text-3xl">Good morning, operator.</h1><p className="mt-2 text-sm text-[#8f88b5]">Here is the decision picture until the following bus in {scenario.followingBusArrival} minutes.</p></div><div className="flex items-center gap-2 rounded-lg border border-[#a78bfa]/12 bg-[#100c35]/70 px-3 py-2 text-[10px] text-[#8f88b5]"><Clock3 size={13} className="text-[#c4b5fd]" /> Data refreshed 18 sec ago</div></div>
@@ -448,11 +450,13 @@ function Overview() {
       <KpiCard label="Occupancy" value={`${result.occupancy.toFixed(1)}%`} sub={`Platform capacity ${scenario.platformCapacity}`} icon={Gauge} accent="#f0bd69" footer={<CrowdProgress value={result.occupancy} tone="#f0bd69" />} />
       <KpiCard label="Next vehicle" value={`${scenario.nextVehicleArrival} min`} sub={`${scenario.vehicleCapacity} people capacity`} icon={TrainFront} accent="#67e8a5" footer={<span className="text-[#67e8a5]">Approaching</span>} />
     </div>
-    <div className="mt-4 grid grid-cols-1 gap-4">
+    <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_.8fr]">
       <div className="cf-panel p-5 sm:p-6"><SectionTitle eyebrow="Signal / short horizon" title="Crowd trajectory" action={<span className="cf-mono text-[10px] text-[#8f88b5]">0—{scenario.followingBusArrival} MIN</span>} /><ForecastChart result={result} compact /><div className="mt-3 flex flex-wrap items-center gap-5 text-[10px] text-[#8f88b5]"><span className="flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-[#a78bfa]" /> projected crowd</span><span className="flex items-center gap-2"><i className="h-px w-3 border-t border-dashed border-[#ec4899]" /> vehicle capacity line</span><span className="ml-auto font-bold text-[#c4b5fd]">{result.riskExplanation}</span></div></div>
+      <RecommendationCard compact />
     </div>
-    <div className="mt-4 grid grid-cols-1 gap-4">
+    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_.85fr]">
       <div className="cf-panel p-5 sm:p-6"><SectionTitle eyebrow="Station pulse" title="Platforms at a glance" action={<Link href="/live-crowd" className="flex items-center gap-1 text-[10px] font-bold text-[#c4b5fd] no-underline" data-testid="link-view-platforms">View live crowd <ChevronRight size={13} /></Link>} /><div>{platforms.slice(0, 3).map((platform) => { const occupancy = platform.crowd / platform.capacity * 100; const platformRisk: Risk = occupancy >= 100 ? 'CRITICAL' : occupancy >= 95 ? 'HIGH' : occupancy >= 85 ? 'WARNING' : occupancy >= 70 ? 'WATCH' : 'NORMAL'; return <div key={platform.id} className="cf-table-row" data-testid={`row-platform-${platform.id}`}><div><div className="text-xs font-bold text-[#f8f7ff]">{platform.name}</div><div className="mt-1 text-[10px] text-[#8f88b5]">{platform.destination}</div></div><div className="cf-mono text-xs text-[#c4b5fd]">{platform.crowd}</div><div><CrowdProgress value={occupancy} tone={platformRisk === 'NORMAL' ? '#67e8a5' : '#a78bfa'} /><div className="mt-1 text-[9px] text-[#8f88b5]">{occupancy.toFixed(0)}% full</div></div><RiskBadge risk={platformRisk} /></div>; })}</div></div>
+      <div className="cf-panel p-5 sm:p-6"><SectionTitle eyebrow="Latest communications" title="Announcement preview" action={<Link href="/announcements" className="text-[10px] font-bold text-[#c4b5fd] no-underline" data-testid="link-all-announcements">See all</Link>} /><div className="rounded-xl border border-[#a78bfa]/12 bg-[#0b0928]/60 p-4"><div className="mb-3 flex items-center justify-between text-[10px]"><span className="flex items-center gap-2 font-bold text-[#c4b5fd]"><MessageSquareText size={13} /> {announcements[0]?.language ?? 'English'}</span><span className="text-[#8f88b5]">{announcements[0]?.timestamp}</span></div><p className="m-0 text-xs leading-relaxed text-[#f8f7ff]">{announcements[0]?.text}</p><div className="mt-4 flex items-center gap-2 text-[9px] text-[#8f88b5]"><Sparkles size={11} className="text-[#ec4899]" /> {announcements[0]?.source} · review before publishing</div></div></div>
     </div>
     <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#ec4899]/15 bg-[#ec4899]/[.05] px-4 py-3 text-[11px] text-[#c4b5fd]"><ShieldAlert size={15} className="shrink-0 text-[#f472b6]" /><span>Operator note: forecasts are estimates from currently available data, not guarantees. Use official procedures for urgent situations.</span></div>
   </PageFrame>;
@@ -532,25 +536,12 @@ function Settings() {
   </PageFrame>;
 }
 
-function StaffPortal() {
-  const { result, scenario, recommendation } = useCrowdFlow();
-  const currentOccupancy = (scenario.currentCrowd / scenario.platformCapacity) * 100;
-  const platformRisk = (occupancy: number): Risk => occupancy >= 100 ? 'CRITICAL' : occupancy >= 95 ? 'HIGH' : occupancy >= 85 ? 'WARNING' : occupancy >= 70 ? 'WATCH' : 'NORMAL';
-  return <div className="cf-staff-shell">
-    <header className="cf-staff-header"><div><div className="cf-staff-brand"><span className="cf-staff-mark"><Radio size={15} /></span><span>CrowdFlow <b>Staff</b></span></div><div className="cf-staff-meta">CENTRAL TERMINAL · CEN-01 <span className="cf-live-dot" /> LIVE</div></div><div className="cf-staff-user"><span className="cf-staff-avatar">AR</span><span className="hidden sm:inline">A. Rahman · Duty manager</span></div></header>
-    <main className="cf-staff-main"><div className="cf-staff-intro"><div><div className="cf-label">Operator mobile view</div><h1>Short prediction</h1><p>One glance. The next decision.</p></div><span className="cf-staff-updated"><span className="cf-live-dot" /> Updated just now</span></div>
-      <section className={`cf-staff-prediction ${riskClass(result.risk)}`} aria-label="Short prediction summary"><div className="cf-staff-prediction-top"><div><div className="cf-label">Platform 01 · next {scenario.followingBusArrival} min</div><div className="cf-staff-risk-label"><span className="cf-staff-risk-dot" /> {result.risk} RISK</div></div><div className="cf-staff-score">{Math.round(result.occupancy)}<small>%</small></div></div><div className="cf-staff-progress"><span style={{ width: `${Math.min(100, result.occupancy)}%` }} /></div><div className="cf-staff-prediction-grid"><div><span>NOW</span><strong>{scenario.currentCrowd.toLocaleString()}</strong><small>{currentOccupancy.toFixed(1)}% full</small></div><div><span>PREDICTED</span><strong>{result.predictedCrowd.toLocaleString()}</strong><small>{result.predictedCrowd >= scenario.currentCrowd ? '+' : ''}{result.predictedCrowd - scenario.currentCrowd} people</small></div><div><span>NEXT TRAIN</span><strong>{scenario.nextVehicleArrival}<small> min</small></strong><small>{scenario.vehicleCapacity} capacity</small></div></div><div className="cf-staff-why"><Lightbulb size={16} /><span>{result.riskExplanation}</span></div></section>
-      <section className="cf-staff-action"><div><div className="cf-label">Recommended action</div><h2>{recommendation.label}</h2><p>{recommendation.reason}</p></div><button className="cf-btn cf-btn-primary">Acknowledge <Check size={14} /></button></section>
-      <section className="cf-staff-platforms"><div className="cf-label">All platforms · at a glance</div>{platforms.map((platform) => { const occupancy = platform.crowd / platform.capacity * 100; const risk = platformRisk(occupancy); return <div className="cf-staff-platform" key={platform.id}><div><strong>{platform.name}</strong><span>{platform.destination}</span></div><div className="cf-staff-platform-stat"><RiskBadge risk={risk} /><b>{Math.round(occupancy)}%</b><span>{platform.next}</span></div></div>; })}</section>
-      <div className="cf-staff-footer"><ShieldAlert size={14} /> Forecasts are guidance. Follow official station procedures for urgent situations.</div>
-    </main>
-  </div>;
-}
-
 function DashboardPage({ page }: { page: Page }) {
   if (page === 'overview') return <Overview />;
   if (page === 'live') return <LiveCrowd />;
   if (page === 'forecast') return <Forecast />;
+  if (page === 'actions') return <Actions />;
+  if (page === 'announcements') return <Announcements />;
   return <Settings />;
 }
 
@@ -558,10 +549,11 @@ const queryClient = new QueryClient();
 
 function Router() {
   return <ErrorBoundary><Switch>
-    <Route path="/staff" component={StaffPortal} />
     <Route path="/" component={() => <DashboardPage page="overview" />} />
     <Route path="/live-crowd" component={() => <DashboardPage page="live" />} />
     <Route path="/forecast" component={() => <DashboardPage page="forecast" />} />
+    <Route path="/actions" component={() => <DashboardPage page="actions" />} />
+    <Route path="/announcements" component={() => <DashboardPage page="announcements" />} />
     <Route path="/settings" component={() => <DashboardPage page="settings" />} />
     <Route component={NotFound} />
   </Switch></ErrorBoundary>;
