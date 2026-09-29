@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CrowdFlow AI"
+description = "A calm operational dashboard for monitoring station crowds, forecasting capacity risk, recommending one action, and drafting multilingual public announcements."
+version = "1.0.0"
+id = "artifacts/crowdflow-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22023
+
+[services.development]
+run = "pnpm --filter @workspace/crowdflow-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/crowdflow-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/crowdflow-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22023"
+BASE_PATH = "/"
