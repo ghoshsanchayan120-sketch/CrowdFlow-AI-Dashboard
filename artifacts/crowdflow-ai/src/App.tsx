@@ -59,6 +59,7 @@ type GeminiStatus = 'idle' | 'testing' | 'connected' | 'error';
 
 type ScenarioInput = {
   currentCrowd: number;
+  platformCapacity: number;
   vehicleCapacity: number;
   nextVehicleArrival: number;
   recentCrowdGrowth: number;
@@ -92,6 +93,7 @@ type Thresholds = { watch: number; warning: number; high: number; critical: numb
 
 const defaultScenario: ScenarioInput = {
   currentCrowd: 438,
+  platformCapacity: 600,
   vehicleCapacity: 600,
   nextVehicleArrival: 7,
   recentCrowdGrowth: 18,
@@ -128,7 +130,7 @@ function calculateForecast(input: ScenarioInput, thresholds: Thresholds): Foreca
   const crowdAtNextVehicle = Math.max(0, input.currentCrowd + crowdGrowth * nextVehicleArrival);
   const crowdAfterNextVehicle = Math.max(0, crowdAtNextVehicle - input.vehicleCapacity);
   const predictedCrowd = Math.max(0, Math.round(crowdAfterNextVehicle + crowdGrowth * (followingBusArrival - nextVehicleArrival)));
-  const occupancy = input.vehicleCapacity > 0 ? (predictedCrowd / input.vehicleCapacity) * 100 : 0;
+  const occupancy = input.platformCapacity > 0 ? (predictedCrowd / input.platformCapacity) * 100 : 0;
   const risk: Risk =
     occupancy >= thresholds.critical ? 'CRITICAL' :
       occupancy >= thresholds.high ? 'HIGH' :
@@ -150,7 +152,7 @@ function calculateForecast(input: ScenarioInput, thresholds: Thresholds): Foreca
     return {
       minute,
       crowd: Math.max(0, Math.round(crowd)),
-      capacity: input.vehicleCapacity,
+      capacity: input.platformCapacity,
     };
   });
   return { predictedCrowd, occupancy, risk, riskExplanation, chartPoints };
@@ -402,6 +404,7 @@ function ScenarioControls({ showPresets = true }: { showPresets?: boolean }) {
   const { draftScenario, setDraft, recalculate } = useCrowdFlow();
   const fields: Array<[keyof ScenarioInput, string, string, number, number, number]> = [
     ['currentCrowd', 'Current crowd', 'people', 0, 2000, 1],
+    ['platformCapacity', 'Platform capacity', 'people', 100, 3000, 10],
     ['vehicleCapacity', 'Vehicle capacity', 'people', 100, 2000, 10],
     ['nextVehicleArrival', 'Next vehicle arrives in', 'min', 0, 60, 1],
     ['recentCrowdGrowth', 'Recent crowd growth / min', 'people', -30, 100, 1],
@@ -409,17 +412,17 @@ function ScenarioControls({ showPresets = true }: { showPresets?: boolean }) {
   ];
   const setPreset = (name: string) => {
     const presets: Record<string, ScenarioInput> = {
-      Normal: { ...defaultScenario, currentCrowd: 280, vehicleCapacity: 600, nextVehicleArrival: 4, recentCrowdGrowth: 8, followingBusArrival: 12 },
-      Busy: { ...defaultScenario, currentCrowd: 450, vehicleCapacity: 600, nextVehicleArrival: 8, recentCrowdGrowth: 23, followingBusArrival: 18 },
-      Delayed: { ...defaultScenario, currentCrowd: 470, vehicleCapacity: 600, nextVehicleArrival: 18, recentCrowdGrowth: 18, followingBusArrival: 28 },
-      'Near capacity': { ...defaultScenario, currentCrowd: 545, vehicleCapacity: 600, nextVehicleArrival: 9, recentCrowdGrowth: 15, followingBusArrival: 16 },
-      Critical: { ...defaultScenario, currentCrowd: 590, vehicleCapacity: 500, nextVehicleArrival: 16, recentCrowdGrowth: 28, followingBusArrival: 26 },
+      Normal: { ...defaultScenario, currentCrowd: 280, platformCapacity: 600, vehicleCapacity: 600, nextVehicleArrival: 4, recentCrowdGrowth: 8, followingBusArrival: 12 },
+      Busy: { ...defaultScenario, currentCrowd: 450, platformCapacity: 600, vehicleCapacity: 600, nextVehicleArrival: 8, recentCrowdGrowth: 23, followingBusArrival: 18 },
+      Delayed: { ...defaultScenario, currentCrowd: 470, platformCapacity: 600, vehicleCapacity: 600, nextVehicleArrival: 18, recentCrowdGrowth: 18, followingBusArrival: 28 },
+      'Near capacity': { ...defaultScenario, currentCrowd: 545, platformCapacity: 600, vehicleCapacity: 600, nextVehicleArrival: 9, recentCrowdGrowth: 15, followingBusArrival: 16 },
+      Critical: { ...defaultScenario, currentCrowd: 590, platformCapacity: 600, vehicleCapacity: 500, nextVehicleArrival: 16, recentCrowdGrowth: 28, followingBusArrival: 26 },
     };
     const next = presets[name];
     Object.entries(next).forEach(([field, value]) => setDraft(field as keyof ScenarioInput, value));
   };
   return <div className="cf-panel p-5 sm:p-6" data-testid="panel-scenario-controls">
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><div className="cf-label mb-2">Prediction inputs</div><h3 className="m-0 text-base font-extrabold text-[#f8f7ff]">Five signals only</h3><p className="mt-1 text-xs text-[#8f88b5]">Prediction uses current crowd, vehicle capacity, both arrival times, and recent growth.</p></div><Zap size={18} className="text-[#c4b5fd]" /></div>
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><div className="cf-label mb-2">Prediction inputs</div><h3 className="m-0 text-base font-extrabold text-[#f8f7ff]">Six signals only</h3><p className="mt-1 text-xs text-[#8f88b5]">Prediction uses current crowd, both capacities, both arrival times, and recent growth.</p></div><Zap size={18} className="text-[#c4b5fd]" /></div>
     {showPresets && <div className="mb-5 flex flex-wrap gap-2">{['Normal', 'Busy', 'Delayed', 'Near capacity', 'Critical'].map((preset) => <button key={preset} onClick={() => setPreset(preset)} className="cf-btn cf-btn-quiet h-8 px-3 text-[10px]" data-testid={`button-preset-${preset.toLowerCase().replaceAll(' ', '-')}`}>{preset}</button>)}</div>}
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {fields.map(([field, label, unit, min, max, step]) => <label key={field} className="block rounded-xl border border-[#a78bfa]/10 bg-[#0b0928]/35 p-3"><span className="flex items-center justify-between gap-2 text-[10px] font-bold text-[#c4b5fd]"><span>{label}</span><span className="cf-mono rounded-md bg-[#a78bfa]/10 px-2 py-1 text-[#f8f7ff]">{draftScenario[field]} {unit}</span></span><input className="mt-3 w-full accent-[#a78bfa]" type="range" min={min} max={max} step={step} value={draftScenario[field]} onChange={(event) => setDraft(field, Number(event.target.value))} data-testid={`input-${field}`} /></label>)}
@@ -440,13 +443,13 @@ function RecommendationCard({ compact = false }: { compact?: boolean }) {
 
 function Overview() {
   const { result, scenario, announcements } = useCrowdFlow();
-  const currentOccupancy = (scenario.currentCrowd / scenario.vehicleCapacity) * 100;
+  const currentOccupancy = (scenario.currentCrowd / scenario.platformCapacity) * 100;
   return <PageFrame page="overview">
     <div className="cf-reveal mb-7 flex flex-wrap items-end justify-between gap-4"><div><div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#8f88b5]"><span className="h-1.5 w-1.5 rounded-full bg-[#67e8a5]" /> Central Terminal · CEN-01</div><h1 className="m-0 text-2xl font-extrabold tracking-[-.05em] text-[#f8f7ff] sm:text-3xl">Good morning, operator.</h1><p className="mt-2 text-sm text-[#8f88b5]">Here is the decision picture until the following bus in {scenario.followingBusArrival} minutes.</p></div><div className="flex items-center gap-2 rounded-lg border border-[#a78bfa]/12 bg-[#100c35]/70 px-3 py-2 text-[10px] text-[#8f88b5]"><Clock3 size={13} className="text-[#c4b5fd]" /> Data refreshed 18 sec ago</div></div>
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard label="Current crowd" value={scenario.currentCrowd.toLocaleString()} sub={`${currentOccupancy.toFixed(1)}% of platform capacity`} icon={Users} accent="#a78bfa" footer={<span className="flex items-center gap-1 text-[#67e8a5]"><ArrowDownRight size={12} /> 2.4%</span>} />
       <KpiCard label={`Forecast · ${scenario.followingBusArrival} min`} value={result.predictedCrowd.toLocaleString()} sub={`${result.predictedCrowd - scenario.currentCrowd >= 0 ? '+' : ''}${result.predictedCrowd - scenario.currentCrowd} people projected`} icon={TrendingUp} accent="#ec4899" footer={<RiskBadge risk={result.risk} />} />
-      <KpiCard label="Occupancy" value={`${result.occupancy.toFixed(1)}%`} sub={`Vehicle capacity ${scenario.vehicleCapacity}`} icon={Gauge} accent="#f0bd69" footer={<CrowdProgress value={result.occupancy} tone="#f0bd69" />} />
+      <KpiCard label="Occupancy" value={`${result.occupancy.toFixed(1)}%`} sub={`Platform capacity ${scenario.platformCapacity}`} icon={Gauge} accent="#f0bd69" footer={<CrowdProgress value={result.occupancy} tone="#f0bd69" />} />
       <KpiCard label="Next vehicle" value={`${scenario.nextVehicleArrival} min`} sub={`${scenario.vehicleCapacity} people capacity`} icon={TrainFront} accent="#67e8a5" footer={<span className="text-[#67e8a5]">Approaching</span>} />
     </div>
     <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_.8fr]">
@@ -482,7 +485,7 @@ function Forecast() {
   return <PageFrame page="forecast">
     <div className="mb-6"><div className="cf-label mb-2">Transparent simulator</div><h1 className="m-0 text-2xl font-extrabold tracking-[-.05em] text-[#f8f7ff]">Forecast the next move</h1><p className="mt-2 max-w-2xl text-sm text-[#8f88b5]">Change the operating assumptions, then recalculate. The numerical result is local and deterministic; AI never decides the risk state.</p></div>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#a78bfa]/12 bg-[#151044]/50 px-4 py-3 text-[11px] text-[#c4b5fd]"><span className="flex items-center gap-2"><Sparkles size={14} className={geminiStatus === 'connected' ? 'text-[#67e8a5]' : 'text-[#f472b6]'} />{geminiStatus === 'connected' ? 'Gemini connected · free Flash-Lite drafts are ready.' : 'Want AI-assisted wording? Add your free Gemini key in Settings.'}</span><Link href="/settings" className="cf-btn cf-btn-secondary h-8 no-underline" data-testid="link-forecast-gemini-settings">Open Gemini settings <ChevronRight size={12} /></Link></div>
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[.75fr_1.25fr]"><ScenarioControls /><div className="space-y-4"><div className="cf-panel p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="cf-label mb-2">Calculated output</div><h2 className="m-0 text-base font-extrabold text-[#f8f7ff]">Estimated crowd when the following bus arrives</h2></div><RiskBadge risk={result.risk} /></div><div className="mt-6 grid grid-cols-3 gap-3"><div><div className="cf-label">Predicted crowd</div><div className="mt-2 text-2xl font-extrabold tracking-[-.06em] text-[#f8f7ff]" data-testid="text-predicted-crowd">{result.predictedCrowd}</div><div className="mt-1 text-[10px] text-[#8f88b5]">people</div></div><div><div className="cf-label">Occupancy</div><div className="mt-2 text-2xl font-extrabold tracking-[-.06em] text-[#f8f7ff]" data-testid="text-forecast-occupancy">{result.occupancy.toFixed(1)}%</div><div className="mt-1 text-[10px] text-[#8f88b5]">of vehicle capacity {scenario.vehicleCapacity}</div></div><div><div className="cf-label">Net flow</div><div className="mt-2 text-2xl font-extrabold tracking-[-.06em] text-[#f8f7ff]">{result.predictedCrowd - scenario.currentCrowd > 0 ? '+' : ''}{result.predictedCrowd - scenario.currentCrowd}</div><div className="mt-1 text-[10px] text-[#8f88b5]">people after the bus sequence</div></div></div><div className="mt-6"><ForecastChart result={result} /></div><div className="mt-4 rounded-xl border border-[#a78bfa]/10 bg-[#0b0928]/50 px-4 py-3 text-xs leading-relaxed text-[#c4b5fd]" data-testid="text-risk-explanation"><span className="mr-2 font-bold text-[#f0bd69]">Why this risk?</span>{result.riskExplanation}</div></div><div className="grid grid-cols-1 gap-4 md:grid-cols-2"><div className="cf-panel p-5"><div className="cf-label mb-3">Calculation trace</div><div className="cf-mono space-y-2 text-[11px] text-[#c4b5fd]"><div className="flex justify-between"><span>current crowd</span><span>{scenario.currentCrowd}</span></div><div className="flex justify-between"><span>growth until next vehicle</span><span>{(scenario.recentCrowdGrowth * scenario.nextVehicleArrival).toFixed(0)} people</span></div><div className="flex justify-between"><span>vehicle boarding capacity</span><span>-{scenario.vehicleCapacity} people</span></div><div className="flex justify-between"><span>growth until following bus</span><span>{(scenario.recentCrowdGrowth * Math.max(0, scenario.followingBusArrival - scenario.nextVehicleArrival)).toFixed(0)} people</span></div><div className="mt-3 border-t border-[#a78bfa]/10 pt-3 flex justify-between font-bold text-[#f8f7ff]"><span>predicted crowd</span><span>{result.predictedCrowd}</span></div></div></div><div className="cf-panel p-5"><div className="cf-label mb-3">Vehicle sequence</div><div className="flex items-center gap-3"><div className="rounded-xl bg-[#67e8a5]/10 p-3 text-[#67e8a5]"><TrainFront size={20} /></div><div><div className="text-sm font-extrabold text-[#f8f7ff]">Next in {scenario.nextVehicleArrival} min</div><div className="mt-1 text-[10px] text-[#8f88b5]">{scenario.vehicleCapacity} capacity · following bus in {scenario.followingBusArrival} min</div></div></div></div></div></div></div>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[.75fr_1.25fr]"><ScenarioControls /><div className="space-y-4"><div className="cf-panel p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="cf-label mb-2">Calculated output</div><h2 className="m-0 text-base font-extrabold text-[#f8f7ff]">Estimated crowd when the following bus arrives</h2></div><RiskBadge risk={result.risk} /></div><div className="mt-6 grid grid-cols-3 gap-3"><div><div className="cf-label">Predicted crowd</div><div className="mt-2 text-2xl font-extrabold tracking-[-.06em] text-[#f8f7ff]" data-testid="text-predicted-crowd">{result.predictedCrowd}</div><div className="mt-1 text-[10px] text-[#8f88b5]">people</div></div><div><div className="cf-label">Occupancy</div><div className="mt-2 text-2xl font-extrabold tracking-[-.06em] text-[#f8f7ff]" data-testid="text-forecast-occupancy">{result.occupancy.toFixed(1)}%</div><div className="mt-1 text-[10px] text-[#8f88b5]">of platform capacity {scenario.platformCapacity}</div></div><div><div className="cf-label">Net flow</div><div className="mt-2 text-2xl font-extrabold tracking-[-.06em] text-[#f8f7ff]">{result.predictedCrowd - scenario.currentCrowd > 0 ? '+' : ''}{result.predictedCrowd - scenario.currentCrowd}</div><div className="mt-1 text-[10px] text-[#8f88b5]">people after the bus sequence</div></div></div><div className="mt-6"><ForecastChart result={result} /></div><div className="mt-4 rounded-xl border border-[#a78bfa]/10 bg-[#0b0928]/50 px-4 py-3 text-xs leading-relaxed text-[#c4b5fd]" data-testid="text-risk-explanation"><span className="mr-2 font-bold text-[#f0bd69]">Why this risk?</span>{result.riskExplanation}</div></div><div className="grid grid-cols-1 gap-4 md:grid-cols-2"><div className="cf-panel p-5"><div className="cf-label mb-3">Calculation trace</div><div className="cf-mono space-y-2 text-[11px] text-[#c4b5fd]"><div className="flex justify-between"><span>current crowd</span><span>{scenario.currentCrowd}</span></div><div className="flex justify-between"><span>platform capacity</span><span>{scenario.platformCapacity} people</span></div><div className="flex justify-between"><span>growth until next vehicle</span><span>{(scenario.recentCrowdGrowth * scenario.nextVehicleArrival).toFixed(0)} people</span></div><div className="flex justify-between"><span>vehicle boarding capacity</span><span>-{scenario.vehicleCapacity} people</span></div><div className="flex justify-between"><span>growth until following bus</span><span>{(scenario.recentCrowdGrowth * Math.max(0, scenario.followingBusArrival - scenario.nextVehicleArrival)).toFixed(0)} people</span></div><div className="mt-3 border-t border-[#a78bfa]/10 pt-3 flex justify-between font-bold text-[#f8f7ff]"><span>predicted crowd</span><span>{result.predictedCrowd}</span></div></div></div><div className="cf-panel p-5"><div className="cf-label mb-3">Vehicle sequence</div><div className="flex items-center gap-3"><div className="rounded-xl bg-[#67e8a5]/10 p-3 text-[#67e8a5]"><TrainFront size={20} /></div><div><div className="text-sm font-extrabold text-[#f8f7ff]">Next in {scenario.nextVehicleArrival} min</div><div className="mt-1 text-[10px] text-[#8f88b5]">{scenario.vehicleCapacity} capacity · following bus in {scenario.followingBusArrival} min</div></div></div></div></div></div></div>
   </PageFrame>;
 }
 
