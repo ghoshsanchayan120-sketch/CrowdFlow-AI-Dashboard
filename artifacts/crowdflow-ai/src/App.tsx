@@ -53,7 +53,7 @@ import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter
 import NotFound from '@/pages/not-found';
 
 type Risk = 'NORMAL' | 'WATCH' | 'WARNING' | 'HIGH' | 'CRITICAL';
-type Page = 'overview' | 'live' | 'forecast' | 'actions' | 'announcements' | 'settings';
+type Page = 'overview' | 'live' | 'forecast' | 'settings';
 type AnnouncementSource = 'Gemini' | 'Deterministic fallback';
 type GeminiStatus = 'idle' | 'testing' | 'connected' | 'error';
 
@@ -118,8 +118,6 @@ const navItems: Array<{ href: string; page: Page; label: string; icon: typeof La
   { href: '/', page: 'overview', label: 'Overview', icon: LayoutDashboard },
   { href: '/live-crowd', page: 'live', label: 'Live Crowd', icon: Radio },
   { href: '/forecast', page: 'forecast', label: 'Forecast', icon: TrendingUp },
-  { href: '/actions', page: 'actions', label: 'Actions', icon: ListChecks },
-  { href: '/announcements', page: 'announcements', label: 'Announcements', icon: MessageSquareText },
   { href: '/settings', page: 'settings', label: 'Settings', icon: Settings2 },
 ];
 
@@ -345,8 +343,6 @@ function Topbar({ page }: { page: Page }) {
     overview: ['Overview', 'Current operating picture'],
     live: ['Live Crowd', 'Observe station movement'],
     forecast: ['Forecast', 'Run a transparent what-if'],
-    actions: ['Actions', 'Review the next best move'],
-    announcements: ['Announcements', 'Prepare clear public language'],
     settings: ['Settings', 'Tune this control room'],
   };
   return (
@@ -442,7 +438,7 @@ function RecommendationCard({ compact = false }: { compact?: boolean }) {
 }
 
 function Overview() {
-  const { result, scenario, announcements } = useCrowdFlow();
+  const { result, scenario } = useCrowdFlow();
   const currentOccupancy = (scenario.currentCrowd / scenario.platformCapacity) * 100;
   return <PageFrame page="overview">
     <div className="cf-reveal mb-7 flex flex-wrap items-end justify-between gap-4"><div><div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#8f88b5]"><span className="h-1.5 w-1.5 rounded-full bg-[#67e8a5]" /> Central Terminal · CEN-01</div><h1 className="m-0 text-2xl font-extrabold tracking-[-.05em] text-[#f8f7ff] sm:text-3xl">Good morning, operator.</h1><p className="mt-2 text-sm text-[#8f88b5]">Here is the decision picture until the following bus in {scenario.followingBusArrival} minutes.</p></div><div className="flex items-center gap-2 rounded-lg border border-[#a78bfa]/12 bg-[#100c35]/70 px-3 py-2 text-[10px] text-[#8f88b5]"><Clock3 size={13} className="text-[#c4b5fd]" /> Data refreshed 18 sec ago</div></div>
@@ -452,13 +448,11 @@ function Overview() {
       <KpiCard label="Occupancy" value={`${result.occupancy.toFixed(1)}%`} sub={`Platform capacity ${scenario.platformCapacity}`} icon={Gauge} accent="#f0bd69" footer={<CrowdProgress value={result.occupancy} tone="#f0bd69" />} />
       <KpiCard label="Next vehicle" value={`${scenario.nextVehicleArrival} min`} sub={`${scenario.vehicleCapacity} people capacity`} icon={TrainFront} accent="#67e8a5" footer={<span className="text-[#67e8a5]">Approaching</span>} />
     </div>
-    <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_.8fr]">
+    <div className="mt-4 grid grid-cols-1 gap-4">
       <div className="cf-panel p-5 sm:p-6"><SectionTitle eyebrow="Signal / short horizon" title="Crowd trajectory" action={<span className="cf-mono text-[10px] text-[#8f88b5]">0—{scenario.followingBusArrival} MIN</span>} /><ForecastChart result={result} compact /><div className="mt-3 flex flex-wrap items-center gap-5 text-[10px] text-[#8f88b5]"><span className="flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-[#a78bfa]" /> projected crowd</span><span className="flex items-center gap-2"><i className="h-px w-3 border-t border-dashed border-[#ec4899]" /> vehicle capacity line</span><span className="ml-auto font-bold text-[#c4b5fd]">{result.riskExplanation}</span></div></div>
-      <RecommendationCard compact />
     </div>
-    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_.85fr]">
+    <div className="mt-4 grid grid-cols-1 gap-4">
       <div className="cf-panel p-5 sm:p-6"><SectionTitle eyebrow="Station pulse" title="Platforms at a glance" action={<Link href="/live-crowd" className="flex items-center gap-1 text-[10px] font-bold text-[#c4b5fd] no-underline" data-testid="link-view-platforms">View live crowd <ChevronRight size={13} /></Link>} /><div>{platforms.slice(0, 3).map((platform) => { const occupancy = platform.crowd / platform.capacity * 100; const platformRisk: Risk = occupancy >= 100 ? 'CRITICAL' : occupancy >= 95 ? 'HIGH' : occupancy >= 85 ? 'WARNING' : occupancy >= 70 ? 'WATCH' : 'NORMAL'; return <div key={platform.id} className="cf-table-row" data-testid={`row-platform-${platform.id}`}><div><div className="text-xs font-bold text-[#f8f7ff]">{platform.name}</div><div className="mt-1 text-[10px] text-[#8f88b5]">{platform.destination}</div></div><div className="cf-mono text-xs text-[#c4b5fd]">{platform.crowd}</div><div><CrowdProgress value={occupancy} tone={platformRisk === 'NORMAL' ? '#67e8a5' : '#a78bfa'} /><div className="mt-1 text-[9px] text-[#8f88b5]">{occupancy.toFixed(0)}% full</div></div><RiskBadge risk={platformRisk} /></div>; })}</div></div>
-      <div className="cf-panel p-5 sm:p-6"><SectionTitle eyebrow="Latest communications" title="Announcement preview" action={<Link href="/announcements" className="text-[10px] font-bold text-[#c4b5fd] no-underline" data-testid="link-all-announcements">See all</Link>} /><div className="rounded-xl border border-[#a78bfa]/12 bg-[#0b0928]/60 p-4"><div className="mb-3 flex items-center justify-between text-[10px]"><span className="flex items-center gap-2 font-bold text-[#c4b5fd]"><MessageSquareText size={13} /> {announcements[0]?.language ?? 'English'}</span><span className="text-[#8f88b5]">{announcements[0]?.timestamp}</span></div><p className="m-0 text-xs leading-relaxed text-[#f8f7ff]">{announcements[0]?.text}</p><div className="mt-4 flex items-center gap-2 text-[9px] text-[#8f88b5]"><Sparkles size={11} className="text-[#ec4899]" /> {announcements[0]?.source} · review before publishing</div></div></div>
     </div>
     <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#ec4899]/15 bg-[#ec4899]/[.05] px-4 py-3 text-[11px] text-[#c4b5fd]"><ShieldAlert size={15} className="shrink-0 text-[#f472b6]" /><span>Operator note: forecasts are estimates from currently available data, not guarantees. Use official procedures for urgent situations.</span></div>
   </PageFrame>;
@@ -542,8 +536,6 @@ function DashboardPage({ page }: { page: Page }) {
   if (page === 'overview') return <Overview />;
   if (page === 'live') return <LiveCrowd />;
   if (page === 'forecast') return <Forecast />;
-  if (page === 'actions') return <Actions />;
-  if (page === 'announcements') return <Announcements />;
   return <Settings />;
 }
 
@@ -554,8 +546,6 @@ function Router() {
     <Route path="/" component={() => <DashboardPage page="overview" />} />
     <Route path="/live-crowd" component={() => <DashboardPage page="live" />} />
     <Route path="/forecast" component={() => <DashboardPage page="forecast" />} />
-    <Route path="/actions" component={() => <DashboardPage page="actions" />} />
-    <Route path="/announcements" component={() => <DashboardPage page="announcements" />} />
     <Route path="/settings" component={() => <DashboardPage page="settings" />} />
     <Route component={NotFound} />
   </Switch></ErrorBoundary>;
