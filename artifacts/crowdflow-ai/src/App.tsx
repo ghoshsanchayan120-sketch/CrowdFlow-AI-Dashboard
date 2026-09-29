@@ -538,6 +538,21 @@ function Settings() {
   </PageFrame>;
 }
 
+function StaffPortal() {
+  const { result, scenario, recommendation } = useCrowdFlow();
+  const currentOccupancy = (scenario.currentCrowd / scenario.platformCapacity) * 100;
+  const platformRisk = (occupancy: number): Risk => occupancy >= 100 ? 'CRITICAL' : occupancy >= 95 ? 'HIGH' : occupancy >= 85 ? 'WARNING' : occupancy >= 70 ? 'WATCH' : 'NORMAL';
+  return <div className="cf-staff-shell">
+    <header className="cf-staff-header"><div><div className="cf-staff-brand"><span className="cf-staff-mark"><Radio size={15} /></span><span>CrowdFlow <b>Staff</b></span></div><div className="cf-staff-meta">CENTRAL TERMINAL · CEN-01 <span className="cf-live-dot" /> LIVE</div></div><div className="cf-staff-user"><span className="cf-staff-avatar">AR</span><span className="hidden sm:inline">A. Rahman · Duty manager</span></div></header>
+    <main className="cf-staff-main"><div className="cf-staff-intro"><div><div className="cf-label">Operator mobile view</div><h1>Short prediction</h1><p>One glance. The next decision.</p></div><span className="cf-staff-updated"><span className="cf-live-dot" /> Updated just now</span></div>
+      <section className={`cf-staff-prediction ${riskClass(result.risk)}`} aria-label="Short prediction summary"><div className="cf-staff-prediction-top"><div><div className="cf-label">Platform 01 · next {scenario.followingBusArrival} min</div><div className="cf-staff-risk-label"><span className="cf-staff-risk-dot" /> {result.risk} RISK</div></div><div className="cf-staff-score">{Math.round(result.occupancy)}<small>%</small></div></div><div className="cf-staff-progress"><span style={{ width: `${Math.min(100, result.occupancy)}%` }} /></div><div className="cf-staff-prediction-grid"><div><span>NOW</span><strong>{scenario.currentCrowd.toLocaleString()}</strong><small>{currentOccupancy.toFixed(1)}% full</small></div><div><span>PREDICTED</span><strong>{result.predictedCrowd.toLocaleString()}</strong><small>{result.predictedCrowd >= scenario.currentCrowd ? '+' : ''}{result.predictedCrowd - scenario.currentCrowd} people</small></div><div><span>NEXT TRAIN</span><strong>{scenario.nextVehicleArrival}<small> min</small></strong><small>{scenario.vehicleCapacity} capacity</small></div></div><div className="cf-staff-why"><Lightbulb size={16} /><span>{result.riskExplanation}</span></div></section>
+      <section className="cf-staff-action"><div><div className="cf-label">Recommended action</div><h2>{recommendation.label}</h2><p>{recommendation.reason}</p></div><button className="cf-btn cf-btn-primary">Acknowledge <Check size={14} /></button></section>
+      <section className="cf-staff-platforms"><div className="cf-label">All platforms · at a glance</div>{platforms.map((platform) => { const occupancy = platform.crowd / platform.capacity * 100; const risk = platformRisk(occupancy); return <div className="cf-staff-platform" key={platform.id}><div><strong>{platform.name}</strong><span>{platform.destination}</span></div><div className="cf-staff-platform-stat"><RiskBadge risk={risk} /><b>{Math.round(occupancy)}%</b><span>{platform.next}</span></div></div>; })}</section>
+      <div className="cf-staff-footer"><ShieldAlert size={14} /> Forecasts are guidance. Follow official station procedures for urgent situations.</div>
+    </main>
+  </div>;
+}
+
 function DashboardPage({ page }: { page: Page }) {
   if (page === 'overview') return <Overview />;
   if (page === 'live') return <LiveCrowd />;
@@ -551,6 +566,7 @@ const queryClient = new QueryClient();
 
 function Router() {
   return <ErrorBoundary><Switch>
+    <Route path="/staff" component={StaffPortal} />
     <Route path="/" component={() => <DashboardPage page="overview" />} />
     <Route path="/live-crowd" component={() => <DashboardPage page="live" />} />
     <Route path="/forecast" component={() => <DashboardPage page="forecast" />} />
